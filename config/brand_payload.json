@@ -1,0 +1,24 @@
+{
+  "brand_a": {
+    "label": "Brand A",
+    "brand_label": "Brand A",
+    "child_intent_id": "1234",
+    "high_impact_intents": [
+      ""
+    ],
+    "training_file": "training_data/brand_a_training_data.csv",
+    "color": "#0099CC",
+    "color_dark": "#006699"
+  },
+  "brand_b": {
+    "label": "Brand B",
+    "brand_label": "Brand B",
+    "child_intent_id": "5678",
+    "high_impact_intents": [
+      ""
+    ],
+    "training_file": "training_data/brand_b_training_data.csv",
+    "color": "#CC2200",
+    "color_dark": "#881100"
+  }
+}
