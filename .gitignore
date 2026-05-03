@@ -1,0 +1,46 @@
+# ── Data & outputs ────────────────────────────────────────────────────────────
+data/
+outputs/
+*.csv
+*.xlsx
+*.json
+
+# ── Private config ─────────────────────────────────────────────────────────────
+config/brands.json
+config/credentials.json
+scripts/credentials.json
+scripts/credentials_*_temp.json
+
+# ── Runtime-generated scripts ──────────────────────────────────────────────────
+scripts/interim_phrase_tuning_sheet_*.py
+scripts/intent_classifier_*.py
+
+# ── Environment ────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
