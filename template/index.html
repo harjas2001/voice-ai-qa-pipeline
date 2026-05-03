@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice AI QA Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0d0f14;
+  --surface:    #13161d;
+  --surface2:   #1a1d26;
+  --surface3:   #20242f;
+  --border:     #252836;
+  --border-hi:  #323750;
+  --text:       #e2e8f4;
+  --text-dim:   #8892a4;
+  --text-muted: #4e5870;
+  --success:    #34d399;
+  --warning:    #fbbf24;
+  --error:      #f87171;
+  --brand:      #0099FF;
+  --brand-dark: #0066CC;
+  --radius:     12px;
+  --radius-sm:  8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: -120px; left: 50%;
+  transform: translateX(-50%);
+  width: 600px; height: 300px;
+  background: radial-gradient(ellipse, rgba(0,153,255,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  transition: background 0.5s;
+}
+
+.app {
+  position: relative; z-index: 1;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 48px 24px 100px;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.header {
+  display: flex; align-items: center; gap: 18px;
+  margin-bottom: 44px;
+}
+.header-badge {
+  width: 52px; height: 52px; flex-shrink: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.4);
+  transition: background 0.4s;
+}
+.header-text h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; line-height: 1.1; }
+.header-text p {
+  font-size: 12px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 5px; letter-spacing: 0.3px;
+}
+
+/* ── Section Label ───────────────────────────────────────── */
+.section-label {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── Card ────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+/* ── Brand Buttons ───────────────────────────────────────── */
+.brand-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+
+.brand-btn {
+  position: relative;
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: left;
+  overflow: hidden;
+}
+.brand-btn::before {
+  content: ''; position: absolute;
+  inset: 0; opacity: 0;
+  transition: opacity 0.2s;
+}
+.brand-btn:hover { transform: translateY(-1px); }
+.brand-btn.active::before { opacity: 1; }
+
+.brand-icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; letter-spacing: -0.5px;
+  color: #fff; position: relative;
+  transition: box-shadow 0.2s;
+}
+.brand-info { position: relative; }
+.brand-name { font-size: 15px; font-weight: 700; line-height: 1; margin-bottom: 5px; }
+.brand-status {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  display: flex; align-items: center; gap: 5px;
+  color: var(--text-muted);
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot.ok   { background: var(--success); box-shadow: 0 0 6px rgba(52,211,153,0.5); }
+.dot.none { background: var(--text-muted); }
+
+.brand-check {
+  position: absolute; top: 10px; right: 10px;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #000; font-weight: 700;
+  opacity: 0; transform: scale(0.5);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.brand-btn.active .brand-check { opacity: 1; transform: scale(1); }
+
+/* ── Credentials ─────────────────────────────────────────── */
+.cred-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 14px;
+  font-size: 12px; color: var(--text-muted);
+  cursor: pointer; background: none; border: none;
+  font-family: 'Syne', sans-serif; font-weight: 600;
+  padding: 0; transition: color 0.15s;
+}
+.cred-link:hover { color: var(--brand); }
+.cred-link-arrow { transition: transform 0.2s; }
+.cred-link.open .cred-link-arrow { transform: rotate(90deg); }
+
+.cred-panel {
+  display: none; margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  animation: fadeSlide 0.18s ease;
+}
+.cred-panel.open { display: block; }
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cred-note {
+  font-size: 12px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.field-grid.cols-1 { grid-template-columns: 1fr; }
+
+.field label {
+  display: block;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 6px;
+}
+.field input {
+  width: 100%;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(0,153,255,0.08);
+}
+.field input::placeholder { color: var(--text-muted); }
+
+/* ── Date Range ──────────────────────────────────────────── */
+.date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+
+.date-grid input[type="date"] {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 500;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  color-scheme: dark;
+}
+.date-grid input[type="date"]:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(0,153,255,0.08);
+}
+
+.utc-box {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+}
+.utc-icon { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+.utc-body { flex: 1; min-width: 0; }
+.utc-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.utc-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--brand);
+  word-break: break-all; line-height: 1.5;
+  transition: color 0.4s;
+}
+.utc-sub {
+  font-size: 11px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 4px;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 11px 22px; border-radius: var(--radius-sm);
+  border: none; cursor: pointer;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+  letter-spacing: 0.2px;
+  transition: all 0.15s; white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--brand);
+  color: #000;
+  box-shadow: 0 4px 14px rgba(0,153,255,0.25);
+}
+.btn-primary:hover { filter: brightness(1.1); box-shadow: 0 6px 20px rgba(0,153,255,0.35); }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; filter: none; box-shadow: none; }
+
+.btn-ghost {
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
+
+.btn-danger  { background: rgba(248,113,113,0.12); color: var(--error); border: 1px solid rgba(248,113,113,0.25); }
+.btn-danger:hover { background: rgba(248,113,113,0.2); }
+
+.btn-success { background: rgba(52,211,153,0.1); color: var(--success); border: 1px solid rgba(52,211,153,0.25); }
+.btn-success:hover { background: rgba(52,211,153,0.18); }
+
+.btn-sm { padding: 8px 14px; font-size: 12px; }
+
+.run-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.running-badge {
+  display: none;
+  align-items: center; gap: 8px;
+  font-size: 12px; font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+.running-badge.show { display: flex; }
+
+.spinner {
+  width: 12px; height: 12px; flex-shrink: 0;
+  border: 2px solid rgba(0,153,255,0.2);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Progress ────────────────────────────────────────────── */
+.progress-card { display: none; }
+.progress-card.visible { display: block; }
+
+.steps-track { display: flex; gap: 4px; margin-bottom: 18px; flex-wrap: wrap; }
+.step-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 13px;
+  border-radius: 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.25s;
+  white-space: nowrap;
+}
+.step-num {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; flex-shrink: 0;
+  transition: all 0.25s;
+}
+.step-item.active {
+  border-color: rgba(0,153,255,0.5);
+  background: rgba(0,153,255,0.06);
+  color: var(--brand);
+  box-shadow: 0 0 12px rgba(0,153,255,0.08);
+}
+.step-item.active .step-num { background: var(--brand); color: #000; }
+.step-item.done   { border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.06); color: var(--success); }
+.step-item.done   .step-num { background: var(--success); color: #000; }
+.step-item.err    { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.06); color: var(--error); }
+.step-item.err    .step-num { background: var(--error); color: #000; }
+
+/* ── Console ─────────────────────────────────────────────── */
+.console {
+  background: #07080b;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  height: 300px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; line-height: 1.8;
+  color: #7dd3fc;
+  scroll-behavior: smooth;
+}
+.console::-webkit-scrollbar { width: 3px; }
+.console::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.log { display: block; }
+.log.ok   { color: var(--success); }
+.log.err  { color: var(--error); }
+.log.warn { color: var(--warning); }
+.log.sep  { color: #6366f1; font-weight: 500; }
+.log.head { color: #c4b5fd; }
+.log.dim  { color: var(--text-muted); }
+
+/* ── Downloads ───────────────────────────────────────────── */
+.dl-section { display: none; }
+.dl-section.visible { display: block; }
+
+.dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.dl-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+  transition: border-color 0.2s;
+}
+.dl-card.ready { border-color: rgba(52,211,153,0.3); }
+.dl-card-top { display: flex; align-items: center; gap: 12px; }
+.dl-icon {
+  width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.dl-icon.full     { background: rgba(139,92,246,0.15); }
+.dl-icon.filtered { background: rgba(52,211,153,0.12); }
+.dl-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.dl-desc  { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+/* ── Toast ───────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 28px; right: 28px; z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; gap: 9px;
+  max-width: 320px;
+  transform: translateY(20px) scale(0.96); opacity: 0;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+.toast.show { transform: translateY(0) scale(1); opacity: 1; }
+.toast.ok  { border-color: rgba(52,211,153,0.4); }
+.toast.err { border-color: rgba(248,113,113,0.4); }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 580px) {
+  .brand-grid, .date-grid, .dl-grid, .field-grid { grid-template-columns: 1fr; }
+  .steps-track { gap: 6px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge" id="headerBadge">📡</div>
+    <div class="header-text">
+      <h1>Voice AI QA Pipeline</h1>
+      <p>genesys cloud → phrase analysis pipeline</p>
+    </div>
+  </div>
+
+  <!-- ── 01 Brand ── -->
+  <div class="section-label">01 &nbsp;Select Brand</div>
+  <div class="card">
+    <div class="brand-grid" id="brandGrid">
+      <!-- Populated dynamically from /api/brands -->
+    </div>
+
+    <button class="cred-link" id="credToggle" onclick="toggleCredPanel()">
+      <span class="cred-link-arrow">›</span>
+      <span id="credToggleText">Configure credentials</span>
+    </button>
+
+    <div class="cred-panel" id="credPanel">
+      <div class="cred-note">
+        Shared credentials — only the Botflow ID differs per brand.<br>
+        Saved to <code>scripts/credentials.json</code> (gitignored).
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label>Client ID</label>
+          <input type="text" id="cred-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx">
+        </div>
+        <div class="field">
+          <label>Client Secret</label>
+          <input type="password" id="cred-client-secret" placeholder="••••••••••••••">
+        </div>
+        <div class="field">
+          <label>Region</label>
+          <input type="text" id="cred-region" placeholder="mypurecloud.com.au">
+        </div>
+      </div>
+
+      <!-- Brand-specific botflow fields, populated by JS -->
+      <div class="field-grid" id="botflowFields"></div>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary btn-sm" onclick="saveCredentials()">Save</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleCredPanel()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 02 Dates ── -->
+  <div class="section-label">02 &nbsp;Date Range <span style="font-weight:400; letter-spacing:0; text-transform:none; font-size:10px; color:var(--text-muted)">&nbsp;Local time → UTC</span></div>
+  <div class="card">
+    <div class="date-grid">
+      <div class="field">
+        <label>From</label>
+        <input type="date" id="startDate" onchange="updateUtc()">
+      </div>
+      <div class="field">
+        <label>To</label>
+        <input type="date" id="endDate" onchange="updateUtc()">
+      </div>
+    </div>
+    <div class="utc-box">
+      <div class="utc-icon">🌐</div>
+      <div class="utc-body">
+        <div class="utc-label">UTC extraction window</div>
+        <div class="utc-value" id="utcValue">Select dates above</div>
+        <div class="utc-sub" id="utcSub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 03 Run ── -->
+  <div class="section-label">03 &nbsp;Run Extraction</div>
+  <div class="card">
+    <div class="run-row">
+      <button class="btn btn-primary" id="extractBtn" onclick="startExtraction()">
+        ▶&nbsp; Start Extraction
+      </button>
+      <button class="btn btn-danger" id="cancelBtn" style="display:none" onclick="cancelExtraction()">
+        ✕&nbsp; Cancel
+      </button>
+      <div class="running-badge" id="runningBadge">
+        <div class="spinner"></div>
+        <span>Running…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Progress ── -->
+  <div class="card progress-card" id="progressCard">
+    <div class="steps-track">
+      <div class="step-item" id="step1"><span class="step-num">1</span> Extract</div>
+      <div class="step-item" id="step2"><span class="step-num">2</span> Parse</div>
+      <div class="step-item" id="step3"><span class="step-num">3</span> Format</div>
+      <div class="step-item" id="step4"><span class="step-num">4</span> Classify</div>
+    </div>
+    <div class="console" id="console"></div>
+  </div>
+
+  <!-- ── Downloads ── -->
+  <div class="dl-section" id="dlSection">
+    <div class="section-label">04 &nbsp;Download</div>
+    <div class="dl-grid">
+      <div class="dl-card ready">
+        <div class="dl-card-top">
+          <div class="dl-icon full">📋</div>
+          <div>
+            <div class="dl-title">Full Output</div>
+            <div class="dl-desc">All records · automated marking · QA columns</div>
+          </div>
+        </div>
+        <button class="btn btn-success btn-sm" onclick="downloadFile('final_full')">↓ Download CSV</button>
+      </div>
+      <div class="dl-card ready">
+        <div class="dl-card-top">
+          <div class="dl-icon filtered">🎯</div>
+          <div>
+            <div class="dl-title">Filtered Sample</div>
+            <div class="dl-desc">Stratified sample · mismatches · high-impact intents</div>
+          </div>
+        </div>
+        <button class="btn btn-success btn-sm" onclick="downloadFile('final_filtered')">↓ Download CSV</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────
+let brand       = null;
+let brands      = {};
+let evtSource   = null;
+let credPanelOpen = false;
+
+// ── UTC helpers ──────────────────────────────────────────
+function getMelbOffset() {
+  const now = new Date();
+  const aedt = new Date(now.toLocaleString('en-US', { timeZone: 'Australia/Melbourne' }));
+  return Math.round((aedt - now) / 3600000);
+}
+
+function toUtc(dateStr, isEnd) {
+  const off = getMelbOffset();
+  const sign = off >= 0 ? '-' : '+';
+  const abs  = Math.abs(off);
+  const h    = String(abs).padStart(2, '0');
+  const time = isEnd ? 'T13:59:59Z' : 'T' + (24 - abs) + ':00:00Z';
+  return dateStr + time;
+}
+
+function updateUtc() {
+  const s   = document.getElementById('startDate').value;
+  const e   = document.getElementById('endDate').value;
+  const off = getMelbOffset();
+  const zone = off === 11 ? 'AEDT (UTC+11)' : 'AEST (UTC+10)';
+  document.getElementById('utcSub').textContent = `Local timezone: ${zone}`;
+
+  if (!s || !e) { document.getElementById('utcValue').textContent = 'Select both dates'; return; }
+  if (s > e)    { document.getElementById('utcValue').textContent = '⚠️  Start must be before end'; return; }
+
+  document.getElementById('utcValue').textContent =
+    `${toUtc(s, false)}  →  ${toUtc(e, true)}`;
+}
+
+// ── Brand ────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
+}
+
+function selectBrand(key, el) {
+  brand = key;
+  const cfg = brands[key];
+  document.querySelectorAll('.brand-btn').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+
+  // Update CSS vars dynamically from brand config
+  const root = document.documentElement;
+  root.style.setProperty('--brand',      cfg.color);
+  root.style.setProperty('--brand-dark', cfg.color_dark);
+
+  // Update glow blob
+  document.body.style.setProperty('--glow-color', cfg.color);
+  document.querySelector('body').setAttribute('data-brand', key);
+
+  updateUtc();
+  if (credPanelOpen) toggleCredPanel();
+}
+
+function renderBrands(brandsData) {
+  const grid = document.getElementById('brandGrid');
+  grid.innerHTML = '';
+  let first = true;
+
+  for (const [key, cfg] of Object.entries(brandsData)) {
+    const shortLabel = cfg.label.replace(/\s+/g, '').substring(0, 4).toUpperCase();
+    const btn = document.createElement('button');
+    btn.className = 'brand-btn';
+    btn.setAttribute('data-key', key);
+    btn.onclick = function() { selectBrand(key, this); };
+
+    // Brand-specific inline styles
+    btn.innerHTML = `
+      <div class="brand-icon" style="
+        background: linear-gradient(135deg, ${cfg.color_dark}, ${cfg.color});
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      ">${shortLabel}</div>
+      <div class="brand-info">
+        <div class="brand-name">${cfg.label}</div>
+        <div class="brand-status">
+          <span class="dot none" id="dot-${key}"></span>
+          <span id="stat-${key}">checking…</span>
+        </div>
+      </div>
+      <div class="brand-check" style="background: ${cfg.color};">✓</div>
+    `;
+
+    // Hover border colour via inline style on mouseenter/leave
+    btn.addEventListener('mouseenter', () => {
+      if (!btn.classList.contains('active')) {
+        btn.style.borderColor = cfg.color + '66';
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (!btn.classList.contains('active')) {
+        btn.style.borderColor = '';
+      }
+    });
+
+    grid.appendChild(btn);
+
+    if (first) {
+      selectBrand(key, btn);
+      first = false;
+    }
+  }
+}
+
+function renderBotflowFields(brandsData) {
+  const container = document.getElementById('botflowFields');
+  container.innerHTML = '';
+  for (const [key, cfg] of Object.entries(brandsData)) {
+    const div = document.createElement('div');
+    div.className = 'field';
+    div.innerHTML = `
+      <label>${cfg.label} Botflow ID</label>
+      <input type="text" id="cred-botflow-${key}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx">
+    `;
+    container.appendChild(div);
+  }
+}
+
+// ── Credentials ──────────────────────────────────────────
+async function checkCredentials() {
+  try {
+    const r = await fetch('/api/credentials');
+    const d = await r.json();
+    for (const key of Object.keys(brands)) {
+      const ok = d.exists && d.has_client_id && d.has_client_secret && d[`botflow_id_${key}`];
+      setCredStatus(key, ok);
+    }
+    return d;
+  } catch { return {}; }
+}
+
+function setCredStatus(key, ok) {
+  const dot  = document.getElementById(`dot-${key}`);
+  const stat = document.getElementById(`stat-${key}`);
+  if (dot)  dot.className  = 'dot ' + (ok ? 'ok' : 'none');
+  if (stat) stat.textContent = ok ? 'ready' : 'not configured';
+}
+
+function toggleCredPanel() {
+  credPanelOpen = !credPanelOpen;
+  document.getElementById('credPanel').classList.toggle('open', credPanelOpen);
+  document.getElementById('credToggle').classList.toggle('open', credPanelOpen);
+  document.getElementById('credToggleText').textContent =
+    credPanelOpen ? 'Close credentials' : 'Configure credentials';
+  if (credPanelOpen) loadCredForm();
+}
+
+async function loadCredForm() {
+  const d = await checkCredentials();
+  if (d.exists) {
+    document.getElementById('cred-region').value    = d.region || '';
+    document.getElementById('cred-client-id').value = '';
+    document.getElementById('cred-client-secret').value = '';
+    for (const key of Object.keys(brands)) {
+      const el = document.getElementById(`cred-botflow-${key}`);
+      if (el) el.value = d[`botflow_id_${key}`] || '';
+    }
+  }
+}
+
+async function saveCredentials() {
+  const payload = {
+    client_id:     document.getElementById('cred-client-id').value.trim(),
+    client_secret: document.getElementById('cred-client-secret').value.trim(),
+    region:        document.getElementById('cred-region').value.trim(),
+  };
+  for (const key of Object.keys(brands)) {
+    const el = document.getElementById(`cred-botflow-${key}`);
+    payload[`botflow_id_${key}`] = el ? el.value.trim() : '';
+  }
+
+  const empty = Object.entries(payload).filter(([,v]) => !v).map(([k]) => k);
+  if (empty.length) { showToast('Fill in all fields', 'err'); return; }
+
+  const r = await fetch('/api/credentials', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const d = await r.json();
+  if (d.success) {
+    showToast('Credentials saved ✓', 'ok');
+    toggleCredPanel();
+    checkCredentials();
+  } else {
+    showToast(d.error || 'Save failed', 'err');
+  }
+}
+
+// ── Extraction ────────────────────────────────────────────
+async function startExtraction() {
+  const s = document.getElementById('startDate').value;
+  const e = document.getElementById('endDate').value;
+  if (!s || !e)  { showToast('Select a date range', 'err'); return; }
+  if (s > e)     { showToast('Start must be before end', 'err'); return; }
+
+  const utcStart = toUtc(s, false);
+  const utcEnd   = toUtc(e, true);
+  const fmt      = v => new Date(v + 'T00:00:00').toLocaleDateString('en-AU', {
+    day: '2-digit', month: 'short'
+  }).replace(' ', '');
+  const label    = `${fmt(s)}_to_${fmt(e)}`;
+
+  const r = await fetch('/api/extract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ brand, start_date: utcStart, end_date: utcEnd, date_label: label }),
+  });
+  const d = await r.json();
+  if (!r.ok) { showToast(d.error || 'Failed to start', 'err'); return; }
+
+  setRunning(true);
+  resetProgress();
+  document.getElementById('progressCard').classList.add('visible');
+  startLogStream();
+  showToast('Extraction started', 'ok');
+}
+
+async function cancelExtraction() {
+  await fetch('/api/cancel', { method: 'POST' });
+}
+
+function downloadFile(type) { window.location.href = `/api/download/${type}`; }
+
+// ── Log stream ────────────────────────────────────────────
+function startLogStream() {
+  if (evtSource) evtSource.close();
+  const con = document.getElementById('console');
+  con.innerHTML = '';
+
+  evtSource = new EventSource('/api/logs');
+  evtSource.onmessage = ev => {
+    if (ev.data === '__DONE__')      { evtSource.close(); setRunning(false); checkDone(); return; }
+    if (ev.data === '__HEARTBEAT__') return;
+    appendLog(ev.data.replace(/<br>/g, '\n'), con);
+  };
+  evtSource.onerror = () => { evtSource.close(); setRunning(false); };
+}
+
+function appendLog(text, con) {
+  text.split('\n').filter(l => l.trim()).forEach(line => {
+    const s = document.createElement('span');
+    s.className = 'log';
+    if (line.includes('✅') || line.includes('complete'))        s.classList.add('ok');
+    else if (line.includes('❌') || /error|failed/i.test(line)) s.classList.add('err');
+    else if (line.includes('⚠️'))                                s.classList.add('warn');
+    else if (line.startsWith('==='))                             s.classList.add('sep');
+    else if (line.startsWith('🔄') || line.startsWith('📊')
+          || line.startsWith('📂') || line.startsWith('🔧'))     s.classList.add('head');
+
+    s.textContent = line;
+    con.appendChild(s);
+    con.appendChild(document.createElement('br'));
+
+    if (line.includes('STEP 1')) setStep(1, 'active');
+    if (line.includes('STEP 2')) { setStep(1, 'done'); setStep(2, 'active'); }
+    if (line.includes('STEP 3')) { setStep(2, 'done'); setStep(3, 'active'); }
+    if (line.includes('STEP 4')) { setStep(3, 'done'); setStep(4, 'active'); }
+  });
+  con.scrollTop = con.scrollHeight;
+}
+
+function setStep(n, state) {
+  const el = document.getElementById(`step${n}`);
+  if (el) el.className = 'step-item ' + state;
+}
+function resetProgress() { [1,2,3,4].forEach(n => setStep(n, '')); }
+
+async function checkDone() {
+  const r = await fetch('/api/status');
+  const d = await r.json();
+  if (d.error) {
+    showToast('Extraction failed: ' + d.error, 'err');
+  } else {
+    setStep(4, 'done');
+    document.getElementById('dlSection').classList.add('visible');
+    document.getElementById('dlSection').scrollIntoView({ behavior: 'smooth' });
+    showToast('Done! Files ready to download.', 'ok');
+  }
+}
+
+// ── UI helpers ────────────────────────────────────────────
+function setRunning(on) {
+  document.getElementById('extractBtn').disabled = on;
+  document.getElementById('cancelBtn').style.display = on ? 'inline-flex' : 'none';
+  document.getElementById('runningBadge').classList.toggle('show', on);
+}
+
+let toastTimer;
+function showToast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = (type === 'ok' ? '✓  ' : '✕  ') + msg;
+  el.className   = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+// ── Init ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const r = await fetch('/api/brands');
+    brands = await r.json();
+    renderBrands(brands);
+    renderBotflowFields(brands);
+  } catch (e) {
+    console.error('Failed to load brand config:', e);
+    showToast('Failed to load brand config', 'err');
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('startDate').value = today;
+  document.getElementById('endDate').value   = today;
+  updateUtc();
+  checkCredentials();
+});
+</script>
+</body>
+</html>
